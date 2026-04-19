@@ -1,0 +1,22 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_service_1 = __importDefault(require("./auth.service"));
+const validation_1 = require("../../common/middleware/validation");
+const auth_validation_1 = require("./auth.validation");
+const authorization_1 = require("../../common/middleware/authorization");
+const authentication_1 = require("../../common/middleware/authentication");
+const user_enum_1 = require("../../common/enum/user.enum");
+const authRouter = (0, express_1.Router)();
+authRouter.post("/signup", (0, validation_1.Validation)(auth_validation_1.signUpSchema), auth_service_1.default.signUp);
+authRouter.patch("/confirm-email", (0, validation_1.Validation)(auth_validation_1.confirmEmailSchema), auth_service_1.default.confirmEmail);
+authRouter.post("/signin", (0, validation_1.Validation)(auth_validation_1.signInSchema), auth_service_1.default.signIn);
+authRouter.post("/signup/gmail", auth_service_1.default.signUpWithGmail);
+authRouter.patch("/updata-password", authentication_1.authentication, (0, authorization_1.authorization)([user_enum_1.RoleEnum.user]), (0, validation_1.Validation)(auth_validation_1.updataPasswordSchema), auth_service_1.default.updatatPassword);
+authRouter.patch("/forget-password", (0, validation_1.Validation)(auth_validation_1.forgetPasswordSchema), auth_service_1.default.forgetPassword);
+authRouter.patch("/reset-password", (0, validation_1.Validation)(auth_validation_1.resetPasswordSchema), auth_service_1.default.resetPassword);
+authRouter.get("/logout", authentication_1.authentication, auth_service_1.default.logout);
+exports.default = authRouter;
