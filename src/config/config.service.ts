@@ -15,9 +15,13 @@ export const SALT_ROUNDS: number = Number(process.env.SALT_ROUNDS) || 12;
 export const EMAIL = process.env.EMAIL;
 export const PASSWORD = process.env.PASSWORD;
 
-export const PREFIX = process.env.PREFIX;
-export const REDIS_URL = process.env.REDIS_URL;
+export const PREFIX_USER = process.env.PREFIX_USER!;
+export const PREFIX_ADMIN = process.env.PREFIX_ADMIN!;
 
-export const WEB_CLIENT_ID = process.env.WEB_CLIENT_ID;
-export const ACCESS_SECRET_KEY = process.env.ACCESS_SECRET_KEY;
-export const REFRESH_SECRET_KEY = process.env.REFRESH_SECRET_KEY;
+export const REDIS_URL = process.env.REDIS_URL!;
+
+export const WEB_CLIENT_ID = process.env.WEB_CLIENT_ID!;
+export const ACCESS_SECRET_KEY_USER = process.env.ACCESS_SECRET_KEY_USER;
+export const REFRESH_SECRET_KEY_USER = process.env.REFRESH_SECRET_KEY_USER;
+export const ACCESS_SECRET_KEY_ADMIN = process.env.ACCESS_SECRET_KEY_ADMIN;
+export const REFRESH_SECRET_KEY_ADMIN = process.env.REFRESH_SECRET_KEY_ADMIN;

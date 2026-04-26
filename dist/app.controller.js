@@ -11,7 +11,7 @@ const config_service_1 = require("./config/config.service");
 const global_error_handler_1 = require("./common/utils/global-error-handler");
 const auth_controller_1 = __importDefault(require("./modules/auth/auth.controller"));
 const connectionDB_1 = __importDefault(require("./DB/connectionDB"));
-const redis_db_1 = require("./DB/redis/redis.db");
+const redis_service_1 = __importDefault(require("./common/services/redis.service"));
 const app = (0, express_1.default)();
 const port = Number(config_service_1.PORT);
 const bootstrap = () => {
@@ -28,7 +28,7 @@ const bootstrap = () => {
     app.use((0, helmet_1.default)(), (0, cors_1.default)(), limiter);
     app.get("/", (req, res, next) => res.json({ message: "wellcome in Social App" }));
     (0, connectionDB_1.default)();
-    (0, redis_db_1.redisConnection)();
+    redis_service_1.default.connect();
     app.use("/auth", auth_controller_1.default);
     app.use("{/*demo}", (req, res, next) => {
         throw new global_error_handler_1.AppError(`URL ${req.originalUrl} Not Found ....`, 404);

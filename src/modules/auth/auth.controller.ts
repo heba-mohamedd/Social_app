@@ -4,6 +4,7 @@ import { Validation } from "../../common/middleware/validation";
 import {
   confirmEmailSchema,
   forgetPasswordSchema,
+  resendOtpSchema,
   resetPasswordSchema,
   signInSchema,
   signUpSchema,
@@ -30,6 +31,12 @@ authRouter.patch(
   authorization([RoleEnum.user]),
   Validation(updataPasswordSchema),
   authService.updatatPassword,
+);
+
+authRouter.patch(
+  "/resend-otp",
+  Validation(resendOtpSchema),
+  authService.resendOtp,
 );
 
 authRouter.patch(

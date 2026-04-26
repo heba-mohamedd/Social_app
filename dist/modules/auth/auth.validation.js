@@ -38,13 +38,13 @@ const z = __importStar(require("zod"));
 const user_enum_1 = require("../../common/enum/user.enum");
 exports.signUpSchema = {
     body: z
-        .object({
-        userName: z.string({ error: "userName is Required" }).min(3).max(25),
-        email: z.string().email(),
+        .strictObject({
+        userName: z.string({ error: "userName is Required" }).min(3, "userName must be 3 or more characters").max(25),
+        email: z.email("Invalid email address"),
         password: z.string().min(6),
         cPassword: z.string().min(6),
-        age: z.coerce.number().min(15).max(60),
-        gender: z.nativeEnum(user_enum_1.GenderEnum).optional(),
+        age: z.coerce.number().min(15, "age must be 15 or more ").max(60),
+        gender: z.enum(user_enum_1.GenderEnum).optional(),
         address: z.string().optional(),
         phone: z.string().min(11).max(11).optional(),
     })
@@ -55,13 +55,13 @@ exports.signUpSchema = {
 };
 exports.signInSchema = {
     body: z.object({
-        email: z.string().email(),
+        email: z.email("inValid email address"),
         password: z.string().min(6),
     }),
 };
 exports.confirmEmailSchema = {
     body: z.object({
-        email: z.string().email(),
+        email: z.email("inValid email address"),
         code: z.string().regex(/^\d{6}$/, "OTP must be exactly 6 digits"),
     }),
 };
@@ -79,13 +79,13 @@ exports.updataPasswordSchema = {
 };
 exports.forgetPasswordSchema = {
     body: z.object({
-        email: z.string().email(),
+        email: z.email("inValid email address"),
     }),
 };
 exports.resetPasswordSchema = {
     body: z
         .object({
-        email: z.string().email(),
+        email: z.email("inValid email address"),
         code: z.string().regex(/^\d{6}$/),
         password: z.string().min(6),
     })

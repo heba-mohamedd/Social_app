@@ -9,7 +9,7 @@ import {
 } from "./common/utils/global-error-handler";
 import authRouter from "./modules/auth/auth.controller";
 import checkConnectionDB from "./DB/connectionDB";
-import { redisConnection } from "./DB/redis/redis.db";
+import redisService from "./common/services/redis.service";
 
 const app: express.Application = express();
 const port: number = Number(PORT);
@@ -36,7 +36,7 @@ const bootstrap = () => {
     res.json({ message: "wellcome in Social App" }),
   );
   checkConnectionDB();
-  redisConnection();
+  redisService.connect();
 
   app.use("/auth", authRouter);
   app.use("{/*demo}", (req: Request, res: Response, next: NextFunction) => {

@@ -1,21 +1,21 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const redis_1 = require("redis");
-const email_enum_js_1 = require("../../common/enum/email.enum.js");
-const config_service_js_1 = require("../../config/config.service.js");
+const config_service_1 = require("../../config/config.service");
+const email_enum_1 = require("../enum/email.enum");
 class RedisServise {
     client;
     constructor() {
         this.client = (0, redis_1.createClient)({
-            url: config_service_js_1.REDIS_URL,
+            url: config_service_1.REDIS_URL,
         });
-        this.handleEvent();
+        this.handleEvents();
     }
     async connect() {
-        this.client.connect();
+        await this.client.connect();
         console.log("Connected to Redis successfully!");
     }
-    handleEvent() {
+    handleEvents() {
         this.client.on("error", (error) => {
             console.log("Connect to Redis if Failed !", error);
         });
@@ -26,7 +26,7 @@ class RedisServise {
     get_key = (userId) => {
         return `revoke_token::${userId}`;
     };
-    otp_key = ({ email, subject = email_enum_js_1.EmailEnum.confirmEmail, }) => {
+    otp_key = ({ email, subject = email_enum_1.EmailEnum.confirmEmail, }) => {
         return `otp::${email}::${subject}`;
     };
     max_otp_key = ({ email, subject }) => {
