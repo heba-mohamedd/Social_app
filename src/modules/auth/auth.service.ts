@@ -17,7 +17,7 @@ import { emailTemplete } from "../../common/utils/email/email.templete";
 import { eventEmitter } from "../../common/utils/email/email.events";
 import { EmailEnum } from "../../common/enum/email.enum";
 import { ProviderEnum, RoleEnum } from "../../common/enum/user.enum";
-import { OAuth2Client } from "google-auth-library";
+import { OAuth2Client, TokenPayload } from "google-auth-library";
 import {
   ACCESS_SECRET_KEY_ADMIN,
   ACCESS_SECRET_KEY_USER,
@@ -29,11 +29,13 @@ import { randomUUID } from "node:crypto";
 import RedisService from "../../common/services/redis.service";
 import { successResponse } from "../../common/utils/response.success";
 import TokenService from "../../common/services/token.service";
+import { S3Service } from "../../common/services/s3.service";
 
 class AuthService {
   private readonly _userModle = new UserRepository();
   private readonly _redisService = RedisService;
   private readonly _tokenService = TokenService;
+  private readonly _s3Service = new S3Service();
 
   constructor() {}
 
@@ -65,7 +67,7 @@ class AuthService {
       await this._redisService.setValue({
         key: this._redisService.block_otp_key({ email, subject }),
         value: 1,
-        ttl: 5 * 60,
+        ttl: 15 * 60,
       });
       throw new Error(`Too many attempts. Please try again later.`);
     }
@@ -76,7 +78,7 @@ class AuthService {
     eventEmitter.emit(subject, async () => {
       await sendEmail({
         to: email,
-        subject: "Saraha App",
+        subject: "social App",
         html: emailTemplete(otp),
       });
     });
@@ -207,7 +209,7 @@ class AuthService {
     if (!payload) {
       throw new Error("Invalid Google token", { cause: 400 });
     }
-    const { name, email, email_verified } = payload;
+    const { name, email, email_verified } = payload as TokenPayload;
     if (!email) {
       throw new Error("Email not provided by Google", { cause: 400 });
     }
@@ -324,6 +326,7 @@ class AuthService {
       data: { access_token: access_token, refresh_token },
     });
   };
+
   forgetPassword = async (req: Request, res: Response, next: NextFunction) => {
     const { email }: forgetPasswordDto = req.body;
     if (!email) throw new Error("Email is required", { cause: 406 });
@@ -336,15 +339,13 @@ class AuthService {
       },
     });
     if (!user) {
-      throw new AppError("user not exist", 404);
+      throw new Error("user not exist", { cause: 404 });
     }
 
-    await this.sendEmailOtp({
-      email,
-      subject: EmailEnum.forgetPassword,
-    });
+    await this.sendEmailOtp({ email, subject: EmailEnum.forgetPassword });
 
-    return res.status(201).json({
+    successResponse({
+      res,
       message: "success",
     });
   };
@@ -362,7 +363,7 @@ class AuthService {
       throw new Error("user not Exist or already Confirmed", { cause: 400 });
     }
     await this.sendEmailOtp({ email, subject: EmailEnum.confirmEmail });
-    successResponse({ res, message: "Email Confirmed Successfully" });
+    successResponse({ res, message: "OTP sent successfully" });
   };
 
   resetPassword = async (req: Request, res: Response, next: NextFunction) => {
@@ -461,6 +462,14 @@ class AuthService {
     }
 
     return res.status(200).json({ message: "done" });
+  };
+
+  uploadImage = async (req: Request, res: Response, next: NextFunction) => {
+    const urls = await this._s3Service.uploadFiles({
+      files: req.files as Express.Multer.File[],
+      path: "users/meny",
+    });
+    successResponse({ res, data: { urls } });
   };
 }
 

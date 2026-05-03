@@ -10,8 +10,6 @@ const auth_validation_1 = require("./auth.validation");
 const authorization_1 = require("../../common/middleware/authorization");
 const authentication_1 = require("../../common/middleware/authentication");
 const user_enum_1 = require("../../common/enum/user.enum");
-const multer_cloud_1 = __importDefault(require("../../common/middleware/multer.cloud"));
-const multer_enum_1 = require("../../common/enum/multer.enum");
 const authRouter = (0, express_1.Router)();
 authRouter.post("/signup", (0, validation_1.Validation)(auth_validation_1.signUpSchema), auth_service_1.default.signUp);
 authRouter.patch("/confirm-email", (0, validation_1.Validation)(auth_validation_1.confirmEmailSchema), auth_service_1.default.confirmEmail);
@@ -22,5 +20,4 @@ authRouter.patch("/resend-otp", (0, validation_1.Validation)(auth_validation_1.r
 authRouter.patch("/forget-password", (0, validation_1.Validation)(auth_validation_1.forgetPasswordSchema), auth_service_1.default.forgetPassword);
 authRouter.patch("/reset-password", (0, validation_1.Validation)(auth_validation_1.resetPasswordSchema), auth_service_1.default.resetPassword);
 authRouter.get("/logout", authentication_1.authentication, auth_service_1.default.logout);
-authRouter.post("/upload", (0, multer_cloud_1.default)({ store_type: multer_enum_1.Store_Enum.memory }).array("attachment"), auth_service_1.default.uploadImage);
 exports.default = authRouter;

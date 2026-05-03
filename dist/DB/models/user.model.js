@@ -37,7 +37,9 @@ const userSchema = new mongoose_1.default.Schema({
     },
     age: {
         type: Number,
-        required: true,
+        required: function () {
+            return this.provider !== user_enum_1.ProviderEnum.google;
+        },
         min: 15,
         max: 60,
     },
@@ -50,6 +52,7 @@ const userSchema = new mongoose_1.default.Schema({
         trim: true,
     },
     confirmed: Boolean,
+    deletedAt: String,
     gender: {
         type: String,
         enum: Object.values(user_enum_1.GenderEnum),
@@ -84,5 +87,16 @@ userSchema
         lastName: lastName || "",
     });
 });
+function excludeDeleted() {
+    const { paranoid, ...rest } = this.getQuery();
+    if (paranoid == false) {
+        this.setQuery({ ...rest });
+    }
+    else {
+        this.setQuery({ ...rest, deletedAt: { $exists: false } });
+    }
+}
+userSchema.pre("find", excludeDeleted);
+userSchema.pre("findOne", excludeDeleted);
 const UserModel = mongoose_1.default.models.User || mongoose_1.default.model("User", userSchema);
 exports.default = UserModel;

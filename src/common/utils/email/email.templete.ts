@@ -4,7 +4,7 @@ export const emailTemplete = (otp: number) => {
   <div style="max-width: 500px; margin: auto; background: #ffffff; border-radius: 12px; padding: 30px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
     
     <!-- Logo / Title -->
-    <h2 style="color: #4CAF50; margin-bottom: 10px;">🔐 Saraha App</h2>
+    <h2 style="color: #4CAF50; margin-bottom: 10px;">🔐 Social App</h2>
     
     <!-- Greeting -->
     <p style="color: #333; font-size: 16px;">

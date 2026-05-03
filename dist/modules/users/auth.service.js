@@ -18,12 +18,10 @@ const node_crypto_1 = require("node:crypto");
 const redis_service_1 = __importDefault(require("../../common/services/redis.service"));
 const response_success_1 = require("../../common/utils/response.success");
 const token_service_1 = __importDefault(require("../../common/services/token.service"));
-const s3_service_1 = require("../../common/services/s3.service");
 class AuthService {
     _userModle = new user_repository_1.default();
     _redisService = redis_service_1.default;
     _tokenService = token_service_1.default;
-    _s3Service = new s3_service_1.S3Service();
     constructor() { }
     sendEmailOtp = async ({ email, subject, }) => {
         const isBlocked = await this._redisService.get_ttl(this._redisService.block_otp_key({ email, subject }));
@@ -348,13 +346,6 @@ class AuthService {
             });
         }
         return res.status(200).json({ message: "done" });
-    };
-    uploadImage = async (req, res, next) => {
-        const urls = await this._s3Service.uploadFiles({
-            files: req.files,
-            path: "users/meny",
-        });
-        (0, response_success_1.successResponse)({ res, data: { urls } });
     };
 }
 exports.default = new AuthService();

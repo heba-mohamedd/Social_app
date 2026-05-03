@@ -13,6 +13,8 @@ import {
 import { authorization } from "../../common/middleware/authorization";
 import { authentication } from "../../common/middleware/authentication";
 import { RoleEnum } from "../../common/enum/user.enum";
+import multerCloud from "../../common/middleware/multer.cloud";
+import { Store_Enum } from "../../common/enum/multer.enum";
 const authRouter = Router();
 
 authRouter.post("/signup", Validation(signUpSchema), authService.signUp);
@@ -51,5 +53,16 @@ authRouter.patch(
 );
 
 authRouter.get("/logout", authentication, authService.logout);
+
+// authRouter.post(
+//   "/upload",
+//   multerCloud().single("attachment"),
+//   authService.uploadImage,
+// );
+authRouter.post(
+  "/upload",
+  multerCloud({ store_type: Store_Enum.memory }).array("attachment"),
+  authService.uploadImage,
+);
 
 export default authRouter;

@@ -19,6 +19,7 @@ export interface IUser {
   confirmed?: boolean;
   provider?: ProviderEnum;
   changeCredential?: Date;
+  deletedAt?: string;
 }
 
 export type UserDocument = HydratedDocument<IUser>;
@@ -48,7 +49,7 @@ const userSchema = new mongoose.Schema<IUser>(
     },
     password: {
       type: String,
-      required: function (this: IUser) {
+      required: function (this: IUser): boolean {
         return this.provider !== ProviderEnum.google;
       },
       trim: true,
@@ -56,7 +57,9 @@ const userSchema = new mongoose.Schema<IUser>(
     },
     age: {
       type: Number,
-      required: true  ,
+      required: function (this: IUser): boolean {
+        return this.provider !== ProviderEnum.google;
+      },
       min: 15,
       max: 60,
     },
@@ -70,6 +73,7 @@ const userSchema = new mongoose.Schema<IUser>(
     },
 
     confirmed: Boolean,
+    deletedAt: String,
     gender: {
       type: String,
       enum: Object.values(GenderEnum),
@@ -107,6 +111,18 @@ userSchema
       lastName: lastName || "",
     });
   });
+
+function excludeDeleted(this: any) {
+  const { paranoid, ...rest } = this.getQuery();
+
+  if (paranoid == false) {
+    this.setQuery({ ...rest });
+  } else {
+    this.setQuery({ ...rest, deletedAt: { $exists: false } });
+  }
+}
+userSchema.pre("find", excludeDeleted);
+userSchema.pre("findOne", excludeDeleted);
 
 const UserModel =
   mongoose.models.User || mongoose.model<IUser>("User", userSchema);

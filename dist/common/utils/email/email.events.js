@@ -7,3 +7,6 @@ exports.eventEmitter = new node_events_1.EventEmitter();
 exports.eventEmitter.on(email_enum_1.EmailEnum.confirmEmail, async (fn) => {
     await fn();
 });
+exports.eventEmitter.on(email_enum_1.EmailEnum.forgetPassword, async (fn) => {
+    await fn();
+});
