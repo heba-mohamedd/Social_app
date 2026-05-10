@@ -136,5 +136,23 @@ class RedisServise {
             console.log("error to incr operation", error);
         }
     };
+    key(userId) {
+        return `user:FCM:${userId}`;
+    }
+    async addFMC({ userId, FCMToken, }) {
+        return await this.client.sAdd(this.key(userId), FCMToken);
+    }
+    async removeFMC({ userId, FCMToken, }) {
+        return await this.client.sRem(this.key(userId), FCMToken);
+    }
+    async getFMCs(userId) {
+        return await this.client.sMembers(this.key(userId));
+    }
+    async hasFMCs(userId) {
+        return await this.client.sCard(this.key(userId));
+    }
+    async removeFCMUser(userId) {
+        return await this.client.del(this.key(userId));
+    }
 }
 exports.default = new RedisServise();

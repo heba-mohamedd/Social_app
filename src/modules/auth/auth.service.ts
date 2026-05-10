@@ -30,12 +30,14 @@ import RedisService from "../../common/services/redis.service";
 import { successResponse } from "../../common/utils/response.success";
 import TokenService from "../../common/services/token.service";
 import { S3Service } from "../../common/services/s3.service";
+import NotificationService from "../../common/services/notification.service";
 
 class AuthService {
   private readonly _userModle = new UserRepository();
   private readonly _redisService = RedisService;
   private readonly _tokenService = TokenService;
   private readonly _s3Service = new S3Service();
+  private readonly _notificationService = NotificationService;
 
   constructor() {}
 
@@ -102,7 +104,8 @@ class AuthService {
 
   signUp = async (req: Request, res: Response, next: NextFunction) => {
     const {
-      userName,
+      firstName,
+      lastName,
       email,
       password,
       cPassword,
@@ -118,6 +121,7 @@ class AuthService {
     await this._userModle.checkUserAccount(email);
 
     let otp = await generateOtp();
+    console.log(otp);
 
     eventEmitter.emit(EmailEnum.confirmEmail, async () => {
       await sendEmail({
@@ -147,7 +151,8 @@ class AuthService {
     });
 
     const user = await this._userModle.create({
-      userName,
+      firstName,
+      lastName,
       email,
       password: await Hash({ plainText: password }),
       gender,
@@ -250,7 +255,7 @@ class AuthService {
     });
   };
   signIn = async (req: Request, res: Response, next: NextFunction) => {
-    const { email, password }: SignInDto = req.body;
+    const { email, password, fcm }: SignInDto = req.body;
     if (!email && !password)
       throw new AppError("Email & Password are required", 406);
     if (!email) throw new AppError("Email is required", 406);
@@ -320,6 +325,18 @@ class AuthService {
     await this._redisService.deleteKey(
       this._redisService.count_login_key(email),
     );
+
+    if (fcm) {
+      await this._redisService.addFMC({ userId: user._id, FCMToken: fcm });
+      const tokens = await this._redisService.getFMCs(user._id);
+      await this._notificationService.sendNotifications({
+        tokens,
+        notification: {
+          title: `hi ${user.userName}`,
+          body: `new login at ${new Date()}`,
+        },
+      });
+    }
 
     return res.status(200).json({
       message: "User signed in Successfully",
@@ -464,12 +481,27 @@ class AuthService {
     return res.status(200).json({ message: "done" });
   };
 
+  // uploadImage = async (req: Request, res: Response, next: NextFunction) => {
+  //   const urls = await this._s3Service.uploadFiles({
+  //     files: req.files as Express.Multer.File[],
+  //     path: "users/meny",
+  //   });
+  //   successResponse({ res, data: { urls } });
+  // };
+
   uploadImage = async (req: Request, res: Response, next: NextFunction) => {
-    const urls = await this._s3Service.uploadFiles({
-      files: req.files as Express.Multer.File[],
-      path: "users/meny",
+    const { fileName, ContentType } = req.body;
+    const { url, Key } = await this._s3Service.createSignedUrl({
+      fileName,
+      ContentType,
+      path: `users/${req?.user?._id}`,
     });
-    successResponse({ res, data: { urls } });
+
+    // await this._userModle.findOneAndUpdate({
+    //   filter: { _id: req?.user?._id },
+    //   update: { profilePicture: Key },
+    // });
+    successResponse({ res, data: { url, Key } });
   };
 }
 

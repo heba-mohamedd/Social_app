@@ -19,11 +19,13 @@ const redis_service_1 = __importDefault(require("../../common/services/redis.ser
 const response_success_1 = require("../../common/utils/response.success");
 const token_service_1 = __importDefault(require("../../common/services/token.service"));
 const s3_service_1 = require("../../common/services/s3.service");
+const notification_service_1 = __importDefault(require("../../common/services/notification.service"));
 class AuthService {
     _userModle = new user_repository_1.default();
     _redisService = redis_service_1.default;
     _tokenService = token_service_1.default;
     _s3Service = new s3_service_1.S3Service();
+    _notificationService = notification_service_1.default;
     constructor() { }
     sendEmailOtp = async ({ email, subject, }) => {
         const isBlocked = await this._redisService.get_ttl(this._redisService.block_otp_key({ email, subject }));
@@ -62,12 +64,13 @@ class AuthService {
         }
     };
     signUp = async (req, res, next) => {
-        const { userName, email, password, cPassword, gender, age, address, phone, } = req.body;
+        const { firstName, lastName, email, password, cPassword, gender, age, address, phone, } = req.body;
         if (password !== cPassword) {
             throw new global_error_handler_1.AppError(" password not matched", 400);
         }
         await this._userModle.checkUserAccount(email);
         let otp = await (0, send_email_1.generateOtp)();
+        console.log(otp);
         email_events_1.eventEmitter.emit(email_enum_1.EmailEnum.confirmEmail, async () => {
             await (0, send_email_1.sendEmail)({
                 to: email,
@@ -94,7 +97,8 @@ class AuthService {
             });
         });
         const user = await this._userModle.create({
-            userName,
+            firstName,
+            lastName,
             email,
             password: await (0, hash_security_1.Hash)({ plainText: password }),
             gender,
@@ -184,7 +188,7 @@ class AuthService {
         });
     };
     signIn = async (req, res, next) => {
-        const { email, password } = req.body;
+        const { email, password, fcm } = req.body;
         if (!email && !password)
             throw new global_error_handler_1.AppError("Email & Password are required", 406);
         if (!email)
@@ -235,6 +239,17 @@ class AuthService {
             options: { expiresIn: "1y", jwtid },
         });
         await this._redisService.deleteKey(this._redisService.count_login_key(email));
+        if (fcm) {
+            await this._redisService.addFMC({ userId: user._id, FCMToken: fcm });
+            const tokens = await this._redisService.getFMCs(user._id);
+            await this._notificationService.sendNotifications({
+                tokens,
+                notification: {
+                    title: `hi ${user.userName}`,
+                    body: `new login at ${new Date()}`,
+                },
+            });
+        }
         return res.status(200).json({
             message: "User signed in Successfully",
             data: { access_token: access_token, refresh_token },
@@ -350,11 +365,13 @@ class AuthService {
         return res.status(200).json({ message: "done" });
     };
     uploadImage = async (req, res, next) => {
-        const urls = await this._s3Service.uploadFiles({
-            files: req.files,
-            path: "users/meny",
+        const { fileName, ContentType } = req.body;
+        const { url, Key } = await this._s3Service.createSignedUrl({
+            fileName,
+            ContentType,
+            path: `users/${req?.user?._id}`,
         });
-        (0, response_success_1.successResponse)({ res, data: { urls } });
+        (0, response_success_1.successResponse)({ res, data: { url, Key } });
     };
 }
 exports.default = new AuthService();

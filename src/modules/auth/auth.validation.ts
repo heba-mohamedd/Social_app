@@ -5,15 +5,22 @@ export const signInSchema = {
   body: z.strictObject({
     email: z.email("inValid email address"),
     password: z.string().min(6),
+    fcm: z.string(),
   }),
 };
 export const signUpSchema = {
-  body: signInSchema.body
-    .safeExtend({
-      userName: z
-        .string({ error: "userName is Required" })
-        .min(3, "userName must be 3 or more characters")
+  body: z
+    .strictObject({
+      firstName: z
+        .string({ error: "firstName is Required" })
+        .min(3, "firstName must be 3 or more characters")
         .max(25),
+      lastName: z
+        .string({ error: "lastName is Required" })
+        .min(3, "lastName must be 3 or more characters")
+        .max(25),
+      email: z.email("inValid email address"),
+      password: z.string().min(6),
 
       cPassword: z.string().min(6),
       age: z.coerce.number().min(15, "age must be 15 or more ").max(60),

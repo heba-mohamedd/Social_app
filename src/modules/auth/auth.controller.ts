@@ -61,7 +61,8 @@ authRouter.get("/logout", authentication, authService.logout);
 // );
 authRouter.post(
   "/upload",
-  multerCloud({ store_type: Store_Enum.memory }).array("attachment"),
+  authentication,
+  // multerCloud({ store_type: Store_Enum.memory }).array("attachment"),
   authService.uploadImage,
 );
 

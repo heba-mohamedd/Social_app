@@ -1,4 +1,4 @@
-import {
+import mongoose, {
   HydratedDocument,
   Model,
   PopulateOptions,
@@ -48,6 +48,7 @@ abstract class BaseRepository<TDocument> {
       .populate(options?.populate as PopulateOptions);
   }
 
+
   async findByIdAndUpdate({
     id,
     update,
@@ -86,6 +87,51 @@ abstract class BaseRepository<TDocument> {
     options?: QueryOptions<TDocument>;
   }): Promise<HydratedDocument<TDocument> | null> {
     return this.model.findOneAndDelete(filter, options);
+  }
+
+  async paginate<T>({
+    page,
+    limit,
+    sort,
+    populate,
+    search,
+  }: {
+    page?: number;
+    limit?: number;
+    sort?: any;
+    populate?: any;
+    search?: QueryFilter<T>;
+  }) {
+    page = Number(page) || 1;
+    limit = Number(limit) || 5;
+
+    if (page < 1) page = 1;
+    if (limit < 1) limit = 5;
+
+    const skip = (page - 1) * limit;
+
+    const [data, totalDoc] = await Promise.all([
+      this.model
+        .find({ ...(search ?? {}) })
+        .sort(sort ?? {})
+        .skip(skip)
+        .limit(limit)
+        .populate(populate),
+
+      this.model.countDocuments({ ...(search ?? {}) }),
+    ]);
+
+    const totalPages = Math.ceil(totalDoc / limit);
+
+    return {
+      meta: {
+        currentPage: page,
+        totalPages,
+        limit,
+        totalDoc,
+      },
+      data,
+    };
   }
 }
 

@@ -19,7 +19,10 @@ export interface IUser {
   confirmed?: boolean;
   provider?: ProviderEnum;
   changeCredential?: Date;
+  profilePicture?: string;
   deletedAt?: string;
+  friends?: Types.ObjectId[];
+  requests?: Types.ObjectId[];
 }
 
 export type UserDocument = HydratedDocument<IUser>;
@@ -74,6 +77,7 @@ const userSchema = new mongoose.Schema<IUser>(
 
     confirmed: Boolean,
     deletedAt: String,
+    profilePicture: String,
     gender: {
       type: String,
       enum: Object.values(GenderEnum),
@@ -90,6 +94,8 @@ const userSchema = new mongoose.Schema<IUser>(
       default: RoleEnum.user,
     },
     changeCredential: Date,
+    friends: [{ type: Types.ObjectId, ref: "User" }],
+    requests: [{ type: Types.ObjectId, ref: "User" }],
   },
   {
     timestamps: true,
@@ -99,18 +105,9 @@ const userSchema = new mongoose.Schema<IUser>(
   },
 );
 
-userSchema
-  .virtual("userName")
-  .get(function (this: UserDocument) {
-    return `${this.firstName} ${this.lastName}`;
-  })
-  .set(function (this: UserDocument, value: string) {
-    const [firstName, lastName] = value.split(" ");
-    this.set({
-      firstName,
-      lastName: lastName || "",
-    });
-  });
+userSchema.virtual("userName").get(function (this: UserDocument) {
+  return `${this.firstName} ${this.lastName}`;
+});
 
 function excludeDeleted(this: any) {
   const { paranoid, ...rest } = this.getQuery();

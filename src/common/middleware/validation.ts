@@ -9,6 +9,14 @@ export const Validation = (schema: schemaType) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     const validationError = [];
 
+    // Inject multer files into req.body BEFORE validation so schema can see them
+    if (req?.file) {
+      req.body.attachment = req.file;
+    }
+    if (req?.files) {
+      req.body.attachments = req.files;
+    }
+
     for (const key of Object.keys(schema) as reqType[]) {
       if (!schema[key]) continue;
       const result = await schema[key].safeParseAsync(req[key]);

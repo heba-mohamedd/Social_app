@@ -10,6 +10,13 @@ import {
 import authRouter from "./modules/auth/auth.controller";
 import checkConnectionDB from "./DB/connectionDB";
 import redisService from "./common/services/redis.service";
+import { S3Service } from "./common/services/s3.service";
+import { successResponse } from "./common/utils/response.success";
+import notificationService from "./common/services/notification.service";
+import postRouter from "./modules/posts/post.controller";
+// import { S3Service } from "./common/services/s3.service";
+// import { pipeline } from "node:stream/promises";
+// import { successResponse } from "./common/utils/response.success";
 
 const app: express.Application = express();
 const port: number = Number(PORT);
@@ -35,10 +42,93 @@ const bootstrap = () => {
   app.get("/", (req: Request, res: Response, next: NextFunction) =>
     res.json({ message: "wellcome in Social App" }),
   );
+
+  app.post(
+    "/send-notification",
+    async (req: Request, res: Response, next: NextFunction) => {
+      const result = await notificationService.sendNotification({
+        token: req.body.token,
+        notification: { title: "hiii", body: "Heba Mohamed" },
+      });
+
+      successResponse({ res, data: result });
+    },
+  );
   checkConnectionDB();
   redisService.connect();
 
+  // app.get(
+  //   "/general",
+  //   async (req: Request, res: Response, next: NextFunction) => {
+  //     // const { Key } = req.query as { Key: string };
+  //     // const {keys} = req.body;
+  //     const { folderName } = req.query as { folderName: string };
+
+  //     // const result = await new S3Service().deleteFiles(keys);
+  //     const result = await new S3Service().deleteFolder(folderName);
+
+  //     successResponse({ res, data: result });
+  //   },
+  // );
+  // app.get(
+  //   "/general",
+  //   async (req: Request, res: Response, next: NextFunction) => {
+  //     const { folderName } = req.query as { folderName: string };
+
+  //     const result = await new S3Service().getFiles(folderName);
+  //     const resultMapped = result.Contents?.map((file) => {
+  //       return { key: file.Key };
+  //     });
+  //     successResponse({ res, data: resultMapped });
+  //   },
+  // );
+  // app.get(
+  //   "/general/pre-signed/*path",
+  //   async (req: Request, res: Response, next: NextFunction) => {
+  //     const { path } = req.params as { path: string[] };
+  //     const { download } = req.query as { download: string };
+  //     const Key = path.join("/") as string;
+
+  //     const url = await new S3Service().getPreSignedUrl({
+  //       Key,
+  //       download: download ? download : undefined,
+  //     });
+
+  //     successResponse({ res, data: url });
+  //   },
+  // );
+
+  // app.get(
+  //   "/general/*path",
+  //   async (req: Request, res: Response, next: NextFunction) => {
+  //     const { path } = req.params as { path: string[] };
+  //     const { downLoad } = req.query;
+  //     const Key = path.join("/") as string;
+
+  //     const result = await new S3Service().getFile(Key);
+  //     //  const {Body} = result;
+  //     const stream = result.Body as NodeJS.ReadableStream;
+  //     //  if (!Body) {
+  //     //   throw new AppError("File not found", 404);
+  //     //  }
+  //     res.setHeader("Content-Type", result.ContentType as string);
+  //     res.set("Cross-Origin-Resource-Policy", "cross-origin");
+  //     if (downLoad && downLoad === "true") {
+  //       res.setHeader(
+  //         "Content-Disposition",
+  //         `attachment; filename="${path.pop()}"`,
+  //       ); // only apply it for  download
+  //     }
+
+  //     await pipeline(stream, res);
+
+  //     // successResponse({ res, data: Key });
+  //   },
+  // );
+
   app.use("/auth", authRouter);
+  app.use("/posts", postRouter);
+
   app.use("{/*demo}", (req: Request, res: Response, next: NextFunction) => {
     throw new AppError(`URL ${req.originalUrl} Not Found ....`, 404);
     // throw new Error(`URL ${req.originalUrl} Not Found ....`, { cause: 404 });
