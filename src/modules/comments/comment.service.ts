@@ -13,7 +13,7 @@ import { Store_Enum } from "../../common/enum/multer.enum";
 import { Allow_Comment_Enum } from "../../common/enum/post.enum";
 import { CreateCommentDto } from "./comment.dto";
 import CommentRepository from "../../DB/repositories/comment.repository";
-import { PostAvailability } from "../../common/utils/post.utils";
+import { AvailabilityPost } from "../../common/utils/post.utils";
 
 class PostServise {
   private readonly _userModle = new UserRepository();
@@ -31,7 +31,7 @@ class PostServise {
     const post = await this._postModle.findOne({
       filter: {
         _id: postId,
-        $or: [...PostAvailability(req)],
+        ...AvailabilityPost(req),
         allowComment: Allow_Comment_Enum.allow,
       },
     });
@@ -49,6 +49,9 @@ class PostServise {
         throw new AppError("invalid tag id");
       }
       for (const tag of mentionsTage) {
+        if (tag._id.toString() == req.user._id.toString()) {
+          throw new AppError("you can't mention yourself");
+        }
         mentions.push(tag._id);
         fcmTokens.push(...(await this._redisService.getFMCs(tag._id)));
       }

@@ -14,12 +14,20 @@ postRouter.post(
   Validation(postValidation.createPostSchema),
   postService.createPost,
 );
+
+postRouter.put(
+  "/updata/:postId",
+  authentication,
+  multerCloud({ store_type: Store_Enum.memory }).array("attachments"),
+  Validation(postValidation.updataPostSchema),
+  postService.updataPost,
+);
+
 postRouter.get("/get-post", authentication, postService.getPosts);
 
 postRouter.patch(
   "/:postId",
   authentication,
-
   Validation(postValidation.likePostSchema),
   postService.likePost,
 );

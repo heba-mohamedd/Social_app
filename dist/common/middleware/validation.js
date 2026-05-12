@@ -5,6 +5,8 @@ const global_error_handler_1 = require("../../common/utils/global-error-handler"
 const Validation = (schema) => {
     return async (req, res, next) => {
         const validationError = [];
+        if (!req.body)
+            req.body = {};
         if (req?.file) {
             req.body.attachment = req.file;
         }

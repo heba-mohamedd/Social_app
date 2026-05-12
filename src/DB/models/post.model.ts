@@ -60,6 +60,7 @@ const PostSchema = new mongoose.Schema<IPost>(
 
 function excludeDeleted(this: any) {
   const query = this.getQuery();
+
   if (!query.deletedAt) {
     this.where({ deletedAt: { $exists: false } });
   }

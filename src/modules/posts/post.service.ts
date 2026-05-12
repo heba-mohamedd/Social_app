@@ -5,7 +5,7 @@ import RedisService from "../../common/services/redis.service";
 import TokenService from "../../common/services/token.service";
 import { S3Service } from "../../common/services/s3.service";
 import NotificationService from "../../common/services/notification.service";
-import { CreatePostDto } from "./post.dto";
+import { CreatePostDto, PostIdDto, UpdataPostDto } from "./post.dto";
 import { AppError } from "../../common/utils/global-error-handler";
 import { Types } from "mongoose";
 import PostRepository from "../../DB/repositories/post.repository";
@@ -23,28 +23,23 @@ class PostServise {
   private readonly _notificationService = NotificationService;
   constructor() {}
   createPost = async (req: Request, res: Response, next: NextFunction) => {
-    const {
-      content,
-      allowComment,
-      availability,
-      attachments,
-      tags,
-    }: CreatePostDto = req.body;
+    const { content, allowComment, availability, tags }: CreatePostDto =
+      req.body;
     let mentions: Types.ObjectId[] = [];
     let fcmTokens: string[] = [];
 
     // Only validate tags if tags were actually provided
     if (tags?.length) {
-      if (tags?.includes(req.user!._id.toString())) {
-        throw new AppError("you can't mention yourself");
-      }
       const mentionsTage = await this._userModle.find({
         filter: { _id: { $in: tags } },
       });
       if (mentionsTage.length !== tags.length) {
-        throw new AppError("invalid tag id");
+        throw new AppError("some of tag id you want mention is invalid");
       }
       for (const tag of mentionsTage) {
+        if (tag._id.toString() == req.user._id.toString()) {
+          throw new AppError("you can't mention yourself");
+        }
         mentions.push(tag._id);
         (await this._redisService.getFMCs(tag._id)).map((token) =>
           fcmTokens.push(token),
@@ -85,6 +80,96 @@ class PostServise {
         },
       });
     }
+
+    successResponse({ res, data: post });
+  };
+
+  updataPost = async (req: Request, res: Response, next: NextFunction) => {
+    const { postId } = req.params as PostIdDto;
+
+    const {
+      content,
+      allowComment,
+      availability,
+      tags,
+      removeTags,
+      removeFiles,
+    }: UpdataPostDto = req.body;
+    let fcmTokens: string[] = [];
+
+    let post = await this._postModle.findOne({
+      filter: {
+        _id: postId,
+        createBy: req.user._id,
+      },
+    });
+
+    if (!post) {
+      throw new AppError("post not Found", 404);
+    }
+
+    if (removeFiles?.length) {
+      let inValidFiles = removeFiles.filter((file: string) => {
+        return !post.attachments?.includes(file);
+      });
+      if (inValidFiles?.length) {
+        throw new AppError("some of path file you want remove not exist");
+      }
+      await this._s3Service.deleteFiles(removeFiles);
+      post.attachments = post.attachments?.filter((file: string) => {
+        return !removeFiles.includes(file);
+      }) as string[];
+    }
+
+    let updataTags = new Set(post?.tags?.map((id) => id.toString()));
+    removeTags?.forEach((tag: string) => {
+      updataTags.delete(tag);
+    });
+
+    // Only validate tags if tags were actually provided
+    if (tags?.length) {
+      const mentionsTage = await this._userModle.find({
+        filter: { _id: { $in: tags } },
+      });
+      if (mentionsTage.length !== tags.length) {
+        throw new AppError("some of tag id you want mention is invalid");
+      }
+      for (const tag of mentionsTage) {
+        if (tag._id.toString() == req.user._id.toString()) {
+          throw new AppError("you can't mention yourself");
+        }
+        updataTags.add(tag._id.toString());
+        (await this._redisService.getFMCs(tag._id)).map((token) =>
+          fcmTokens.push(token),
+        );
+      }
+    }
+    post.tags = [...updataTags].map((id: string) => new Types.ObjectId(id));
+
+    if (req.files?.length) {
+      let urls = await this._s3Service.uploadFiles({
+        files: req.files as Express.Multer.File[],
+        path: `users/${req?.user?._id}/posts/${post.folderId}`,
+        store_type: Store_Enum.memory,
+      });
+
+      post.attachments?.push(...urls);
+    }
+
+    if (fcmTokens?.length) {
+      await this._notificationService.sendNotifications({
+        tokens: fcmTokens,
+        notification: {
+          title: `you are mention on new post`,
+          body: content || "new post",
+        },
+      });
+    }
+    if (content) post.content = content;
+    if (availability) post.availability = availability;
+    if (allowComment) post.allowComment = allowComment;
+
+    await post.save();
 
     successResponse({ res, data: post });
   };
@@ -149,7 +234,7 @@ class PostServise {
     const post = await this._postModle.findOneAndUpdate({
       filter: {
         _id: postId,
-        createBy: req.user._id,   // only the owner can delete
+        createBy: req.user._id, // only the owner can delete
         deletedAt: { $exists: false }, // not already deleted
       },
       update: { deletedAt: new Date() },

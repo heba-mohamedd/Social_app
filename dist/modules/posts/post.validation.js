@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deletePostSchema = exports.likePostSchema = exports.createPostSchema = void 0;
+exports.deletePostSchema = exports.likePostSchema = exports.updataPostSchema = exports.createPostSchema = void 0;
 const z = __importStar(require("zod"));
 const generalRules_1 = require("../../common/utils/generalRules");
 const post_enum_1 = require("../../common/enum/post.enum");
@@ -66,6 +66,33 @@ exports.createPostSchema = {
                 });
             }
         }
+    }),
+};
+exports.updataPostSchema = {
+    body: z
+        .strictObject({
+        content: z.string().optional(),
+        attachments: z.array(generalRules_1.generalRules.file).optional(),
+        removeFiles: z.array(z.string()).optional(),
+        allowComment: z.enum(post_enum_1.Allow_Comment_Enum).optional(),
+        availability: z.enum(post_enum_1.Availability_Enum).optional(),
+        tags: z.array(generalRules_1.generalRules.id).optional(),
+        removeTags: z.array(generalRules_1.generalRules.id).optional(),
+    })
+        .superRefine((args, ctx) => {
+        if (args?.tags) {
+            const uniqueTags = new Set(args.tags);
+            if (args.tags.length !== uniqueTags.size) {
+                ctx.addIssue({
+                    code: "custom",
+                    path: ["tags"],
+                    message: "Duplicate tags",
+                });
+            }
+        }
+    }),
+    params: z.strictObject({
+        postId: generalRules_1.generalRules.id,
     }),
 };
 exports.likePostSchema = {

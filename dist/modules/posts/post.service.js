@@ -10,6 +10,7 @@ const token_service_1 = __importDefault(require("../../common/services/token.ser
 const s3_service_1 = require("../../common/services/s3.service");
 const notification_service_1 = __importDefault(require("../../common/services/notification.service"));
 const global_error_handler_1 = require("../../common/utils/global-error-handler");
+const mongoose_1 = require("mongoose");
 const post_repository_1 = __importDefault(require("../../DB/repositories/post.repository"));
 const node_crypto_1 = require("node:crypto");
 const multer_enum_1 = require("../../common/enum/multer.enum");
@@ -24,20 +25,20 @@ class PostServise {
     _notificationService = notification_service_1.default;
     constructor() { }
     createPost = async (req, res, next) => {
-        const { content, allowComment, availability, attachments, tags, } = req.body;
+        const { content, allowComment, availability, tags } = req.body;
         let mentions = [];
         let fcmTokens = [];
         if (tags?.length) {
-            if (tags?.includes(req.user._id.toString())) {
-                throw new global_error_handler_1.AppError("you can't mention yourself");
-            }
             const mentionsTage = await this._userModle.find({
                 filter: { _id: { $in: tags } },
             });
             if (mentionsTage.length !== tags.length) {
-                throw new global_error_handler_1.AppError("invalid tag id");
+                throw new global_error_handler_1.AppError("some of tag id you want mention is invalid");
             }
             for (const tag of mentionsTage) {
+                if (tag._id.toString() == req.user._id.toString()) {
+                    throw new global_error_handler_1.AppError("you can't mention yourself");
+                }
                 mentions.push(tag._id);
                 (await this._redisService.getFMCs(tag._id)).map((token) => fcmTokens.push(token));
             }
@@ -73,6 +74,77 @@ class PostServise {
                 },
             });
         }
+        (0, response_success_1.successResponse)({ res, data: post });
+    };
+    updataPost = async (req, res, next) => {
+        const { postId } = req.params;
+        const { content, allowComment, availability, tags, removeTags, removeFiles, } = req.body;
+        let fcmTokens = [];
+        let post = await this._postModle.findOne({
+            filter: {
+                _id: postId,
+                createBy: req.user._id,
+            },
+        });
+        if (!post) {
+            throw new global_error_handler_1.AppError("post not Found", 404);
+        }
+        if (removeFiles?.length) {
+            let inValidFiles = removeFiles.filter((file) => {
+                return !post.attachments?.includes(file);
+            });
+            if (inValidFiles?.length) {
+                throw new global_error_handler_1.AppError("some of path file you want remove not exist");
+            }
+            await this._s3Service.deleteFiles(removeFiles);
+            post.attachments = post.attachments?.filter((file) => {
+                return !removeFiles.includes(file);
+            });
+        }
+        let updataTags = new Set(post?.tags?.map((id) => id.toString()));
+        removeTags?.forEach((tag) => {
+            updataTags.delete(tag);
+        });
+        if (tags?.length) {
+            const mentionsTage = await this._userModle.find({
+                filter: { _id: { $in: tags } },
+            });
+            if (mentionsTage.length !== tags.length) {
+                throw new global_error_handler_1.AppError("some of tag id you want mention is invalid");
+            }
+            for (const tag of mentionsTage) {
+                if (tag._id.toString() == req.user._id.toString()) {
+                    throw new global_error_handler_1.AppError("you can't mention yourself");
+                }
+                updataTags.add(tag._id.toString());
+                (await this._redisService.getFMCs(tag._id)).map((token) => fcmTokens.push(token));
+            }
+        }
+        post.tags = [...updataTags].map((id) => new mongoose_1.Types.ObjectId(id));
+        if (req.files?.length) {
+            let urls = await this._s3Service.uploadFiles({
+                files: req.files,
+                path: `users/${req?.user?._id}/posts/${post.folderId}`,
+                store_type: multer_enum_1.Store_Enum.memory,
+            });
+            post.attachments?.push(...urls);
+        }
+        if (fcmTokens?.length) {
+            await this._notificationService.sendNotifications({
+                tokens: fcmTokens,
+                notification: {
+                    title: `you are mention on new post`,
+                    body: content || "new post",
+                },
+            });
+        }
+        if (content)
+            post.content = content;
+        if (availability)
+            post.availability = availability;
+        if (allowComment)
+            post.allowComment = allowComment;
+        await post.save();
         (0, response_success_1.successResponse)({ res, data: post });
     };
     getPosts = async (req, res, next) => {

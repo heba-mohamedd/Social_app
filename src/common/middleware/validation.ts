@@ -9,6 +9,9 @@ export const Validation = (schema: schemaType) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     const validationError = [];
 
+    // Ensure req.body is always an object (can be undefined in PUT/PATCH multipart requests)
+    if (!req.body) req.body = {};
+
     // Inject multer files into req.body BEFORE validation so schema can see them
     if (req?.file) {
       req.body.attachment = req.file;

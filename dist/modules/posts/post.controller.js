@@ -45,6 +45,7 @@ const multer_enum_1 = require("../../common/enum/multer.enum");
 const post_service_1 = __importDefault(require("./post.service"));
 const postRouter = (0, express_1.Router)();
 postRouter.post("/create-post", authentication_1.authentication, (0, multer_cloud_1.default)({ store_type: multer_enum_1.Store_Enum.memory }).array("attachments"), (0, validation_1.Validation)(postValidation.createPostSchema), post_service_1.default.createPost);
+postRouter.put("/updata/:postId", authentication_1.authentication, (0, multer_cloud_1.default)({ store_type: multer_enum_1.Store_Enum.memory }).array("attachments"), (0, validation_1.Validation)(postValidation.updataPostSchema), post_service_1.default.updataPost);
 postRouter.get("/get-post", authentication_1.authentication, post_service_1.default.getPosts);
 postRouter.patch("/:postId", authentication_1.authentication, (0, validation_1.Validation)(postValidation.likePostSchema), post_service_1.default.likePost);
 postRouter.delete("/:postId", authentication_1.authentication, post_service_1.default.deletePost);

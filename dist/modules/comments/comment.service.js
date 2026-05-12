@@ -31,7 +31,7 @@ class PostServise {
         const post = await this._postModle.findOne({
             filter: {
                 _id: postId,
-                $or: [...(0, post_utils_1.PostAvailability)(req)],
+                ...(0, post_utils_1.AvailabilityPost)(req),
                 allowComment: post_enum_1.Allow_Comment_Enum.allow,
             },
         });
@@ -48,6 +48,9 @@ class PostServise {
                 throw new global_error_handler_1.AppError("invalid tag id");
             }
             for (const tag of mentionsTage) {
+                if (tag._id.toString() == req.user._id.toString()) {
+                    throw new global_error_handler_1.AppError("you can't mention yourself");
+                }
                 mentions.push(tag._id);
                 fcmTokens.push(...(await this._redisService.getFMCs(tag._id)));
             }
