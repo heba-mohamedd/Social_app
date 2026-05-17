@@ -13,3 +13,10 @@ export enum Like_DisLike_Enum {
   like = "like",
   disLike = "disLike",
 }
+
+
+// post or comment
+export enum On_Model_Enum {
+  Post = "Post",
+  Comment = "Comment",
+}

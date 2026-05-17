@@ -14,6 +14,17 @@ import { S3Service } from "./common/services/s3.service";
 import { successResponse } from "./common/utils/response.success";
 import notificationService from "./common/services/notification.service";
 import postRouter from "./modules/posts/post.controller";
+import commentRouter from "./modules/comments/comment.controller";
+import {
+  GraphQLID,
+  GraphQLInt,
+  GraphQLList,
+  GraphQLNonNull,
+  GraphQLObjectType,
+  GraphQLSchema,
+  GraphQLString,
+} from "graphql";
+import { createHandler } from "graphql-http/lib/use/express";
 // import { S3Service } from "./common/services/s3.service";
 // import { pipeline } from "node:stream/promises";
 // import { successResponse } from "./common/utils/response.success";
@@ -43,17 +54,17 @@ const bootstrap = () => {
     res.json({ message: "wellcome in Social App" }),
   );
 
-  app.post(
-    "/send-notification",
-    async (req: Request, res: Response, next: NextFunction) => {
-      const result = await notificationService.sendNotification({
-        token: req.body.token,
-        notification: { title: "hiii", body: "Heba Mohamed" },
-      });
+  // app.post(
+  //   "/send-notification",
+  //   async (req: Request, res: Response, next: NextFunction) => {
+  //     const result = await notificationService.sendNotification({
+  //       token: req.body.token,
+  //       notification: { title: "hiii", body: "Heba Mohamed" },
+  //     });
 
-      successResponse({ res, data: result });
-    },
-  );
+  //     successResponse({ res, data: result });
+  //   },
+  // );
   checkConnectionDB();
   redisService.connect();
 
@@ -129,6 +140,52 @@ const bootstrap = () => {
   app.use("/auth", authRouter);
   app.use("/posts", postRouter);
 
+  const users = [
+    { id: 1, name: "heba", age: 21, specielization: "MERN Stack" },
+    { id: 2, name: "mohamed", age: 22, specielization: "MERN Stack" },
+    { id: 3, name: "norhan", age: 21, specielization: "MERN Stack" },
+    { id: 4, name: "sara", age: 22, specielization: "MERN Stack" },
+    { id: 5, name: "mariam", age: 23, specielization: "MERN Stack" },
+  ];
+  const userTypeObject = new GraphQLObjectType({
+    name: "getUser",
+    fields: {
+      id: { type: GraphQLInt },
+      name: { type: GraphQLString },
+      age: { type: GraphQLInt },
+      specielization: { type: GraphQLString },
+    },
+  });
+  const schema = new GraphQLSchema({
+    query: new GraphQLObjectType({
+      name: "Query", // it is  the root query
+      description: "query info",
+      fields: {
+        // this are the queries
+        getUser: {
+          type: userTypeObject,
+          args: {
+            id: { type: new GraphQLNonNull(GraphQLInt) },
+          },
+          resolve: (parent, args) => {
+            const user = users.find((user) => user.id == args.id);
+            if (!user) {
+              throw new AppError("user not found");
+            }
+            return user;
+          },
+        },
+        listUsers: {
+          type: new GraphQLList(userTypeObject),
+          resolve: () => {
+            return users;
+          },
+        },
+      },
+    }),
+  });
+
+  app.use("/graphql", createHandler({ schema })); // the endpoint for the graphql
   app.use("{/*demo}", (req: Request, res: Response, next: NextFunction) => {
     throw new AppError(`URL ${req.originalUrl} Not Found ....`, 404);
     // throw new Error(`URL ${req.originalUrl} Not Found ....`, { cause: 404 });

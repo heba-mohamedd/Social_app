@@ -23,12 +23,17 @@ abstract class BaseRepository<TDocument> {
   }
   async findOne({
     filter,
-    projection,
+    options,
   }: {
     filter: QueryFilter<TDocument>;
-    projection?: ProjectionType<TDocument>;
+    options?: QueryOptions<TDocument>;
   }): Promise<HydratedDocument<TDocument> | null> {
-    return this.model.findOne(filter, projection);
+    return this.model
+      .findOne(filter)
+      .populate(options?.populate as PopulateOptions | PopulateOptions[])
+      .select(options?.select as ProjectionType<TDocument>)
+      .sort(options?.sort)
+      .exec();
   }
 
   async find({
@@ -47,7 +52,6 @@ abstract class BaseRepository<TDocument> {
       .limit(options?.limit!)
       .populate(options?.populate as PopulateOptions);
   }
-
 
   async findByIdAndUpdate({
     id,

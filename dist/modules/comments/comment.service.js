@@ -26,17 +26,43 @@ class PostServise {
     _notificationService = notification_service_1.default;
     constructor() { }
     createcomment = async (req, res, next) => {
-        const { content, attachments, tags } = req.body;
-        const { postId } = req.params;
-        const post = await this._postModle.findOne({
-            filter: {
-                _id: postId,
-                ...(0, post_utils_1.AvailabilityPost)(req),
-                allowComment: post_enum_1.Allow_Comment_Enum.allow,
-            },
-        });
-        if (!post) {
-            throw new global_error_handler_1.AppError("post not found");
+        const { content, tags, onModel } = req.body;
+        const { postId, commentId } = req.params;
+        let doc = null;
+        if (onModel == post_enum_1.On_Model_Enum.Post && !commentId) {
+            doc = await this._postModle.findOne({
+                filter: {
+                    _id: postId,
+                    deletedAt: { $exists: false },
+                    $or: [...(0, post_utils_1.AvailabilityPost)(req)],
+                    allowComment: post_enum_1.Allow_Comment_Enum.allow,
+                },
+            });
+            if (!doc) {
+                throw new global_error_handler_1.AppError("post not found ", 404);
+            }
+        }
+        else if (onModel == post_enum_1.On_Model_Enum.Comment && commentId) {
+            const commentDoc = await this._commentModle.findOne({
+                filter: {
+                    _id: commentId,
+                    refId: postId,
+                    onModel: post_enum_1.On_Model_Enum.Post,
+                },
+                options: {
+                    populate: {
+                        path: "refId",
+                        match: {
+                            $or: [...(0, post_utils_1.AvailabilityPost)(req)],
+                            allowComment: post_enum_1.Allow_Comment_Enum.allow,
+                        },
+                    },
+                },
+            });
+            if (!commentDoc?.refId) {
+                throw new global_error_handler_1.AppError("comment not found || comment deleted || comment not belong to this post || post is not available || post is deleted || post is private || post is blocked", 404);
+            }
+            doc = commentDoc;
         }
         let mentions = [];
         let fcmTokens = [];
@@ -60,7 +86,7 @@ class PostServise {
         if (req?.files) {
             urls = await this._s3Service.uploadFiles({
                 files: req.files,
-                path: `users/${req?.user?._id}/posts/${folderId}/comments/${folderId}`,
+                path: `users/${req?.user?._id}/posts/${doc?.folderId}/comments/${folderId}`,
                 store_type: multer_enum_1.Store_Enum.memory,
             });
         }
@@ -70,11 +96,12 @@ class PostServise {
             createBy: req?.user?._id,
             tags: mentions,
             folderId,
-            postId: post._id,
+            refId: doc?._id,
+            onModel,
         });
         if (!comment) {
             await this._s3Service.deleteFiles(urls);
-            throw new global_error_handler_1.AppError("fail to create post");
+            throw new global_error_handler_1.AppError("fail to create post", 500);
         }
         if (fcmTokens?.length) {
             await this._notificationService.sendNotifications({

@@ -1,4 +1,5 @@
 import mongoose, { Types } from "mongoose";
+import { On_Model_Enum } from "../../common/enum/post.enum";
 
 export interface IComment {
   content?: string;
@@ -7,7 +8,10 @@ export interface IComment {
 
   tags?: Types.ObjectId[];
   likes?: Types.ObjectId[];
-  postId: Types.ObjectId;
+  // postId: Types.ObjectId;
+  // commentId?: Types.ObjectId;
+  refId: Types.ObjectId;
+  onModel: On_Model_Enum;
 
   folderId: string;
   deletedAt?: Date;
@@ -24,7 +28,10 @@ const CommentSchema = new mongoose.Schema<IComment>(
 
     attachments: [String],
     createBy: { type: Types.ObjectId, ref: "User", required: true },
-    postId: { type: Types.ObjectId, ref: "Post", required: true },
+    // postId: { type: Types.ObjectId, ref: "Post", required: true },
+    // commentId: { type: Types.ObjectId, ref: "Comment" },
+    refId: { type: Types.ObjectId, refPath: "onModel", required: true }, // postId or commentId
+    onModel: { type: String, enum: On_Model_Enum, required: true }, // either post or comment
 
     tags: [{ type: Types.ObjectId, ref: "User" }],
     likes: [{ type: Types.ObjectId, ref: "User" }],
@@ -41,6 +48,15 @@ const CommentSchema = new mongoose.Schema<IComment>(
   },
 );
 
+CommentSchema.virtual("replies", {
+  ref: "Comment",
+  localField: "_id",
+  foreignField: "refId", // which is commentId in the first version
+  match: {
+    onModel: On_Model_Enum.Comment,
+  },
+});
+
 // function excludeDeleted(this: any) {
 //   const { paranoid, ...rest } = this.getQuery();
 
@@ -51,7 +67,7 @@ const CommentSchema = new mongoose.Schema<IComment>(
 //   }
 // }
 function excludeDeleted(this: any) {
-  this.where({ deletedAt: { $exists: false } });
+  this.where({ deletedAt: null });
 }
 CommentSchema.pre("find", excludeDeleted);
 CommentSchema.pre("findOne", excludeDeleted);

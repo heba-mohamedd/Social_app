@@ -175,27 +175,23 @@ class PostServise {
   };
 
   getPosts = async (req: Request, res: Response, next: NextFunction) => {
-    const availabilityFilter = AvailabilityPost(req);
+    const searchQuery = req?.query?.search
+      ? { content: { $regex: req.query.search, $options: "i" } }
+      : {};
     const posts = await this._postModle.paginate({
       page: Number(req?.query?.page),
       limit: Number(req?.query?.limit),
       sort: { createdAt: -1 },
-      search: req?.query?.search
-        ? {
-            $and: [
-              {
-                $or: [
-                  { content: { $regex: req?.query?.search, $options: "i" } },
-                ],
-              },
-              availabilityFilter,
-            ],
-          }
-        : availabilityFilter,
+      search: {
+        $or: [...AvailabilityPost(req)],
+        deletedAt: { $exists: false },
+        ...searchQuery,
+      },
     });
 
     successResponse({ res, data: posts });
   };
+
   likePost = async (req: Request, res: Response, next: NextFunction) => {
     const { postId } = req.params;
     const { flag } = req.query;
@@ -215,7 +211,8 @@ class PostServise {
     const post = await this._postModle.findOneAndUpdate({
       filter: {
         _id: postId,
-        ...AvailabilityPost(req),
+        deletedAt: { $exists: false },
+        $or: [...AvailabilityPost(req)],
       },
       update: updataQuery,
       options: {

@@ -2,9 +2,7 @@ import { Request } from "express";
 import { Availability_Enum } from "../enum/post.enum";
 
 export const AvailabilityPost = (req: Request) => {
-  return {
-    deletedAt: { $exists: false },
-    $or: [
+  return [
       { availability: Availability_Enum.public },
       {
         availability: Availability_Enum.only_me,
@@ -17,6 +15,5 @@ export const AvailabilityPost = (req: Request) => {
       {
         tags: { $in: [req.user._id] },
       },
-    ],
-  };
+    ]
 };

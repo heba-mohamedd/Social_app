@@ -43,6 +43,6 @@ const authentication_1 = require("../../common/middleware/authentication");
 const multer_cloud_1 = __importDefault(require("../../common/middleware/multer.cloud"));
 const multer_enum_1 = require("../../common/enum/multer.enum");
 const comment_service_1 = __importDefault(require("./comment.service"));
-const commentRouter = (0, express_1.Router)();
-commentRouter.post("/create-comment", authentication_1.authentication, (0, multer_cloud_1.default)({ store_type: multer_enum_1.Store_Enum.memory }).array("attachments"), (0, validation_1.Validation)(commentValidation.createCommentSchema), comment_service_1.default.createcomment);
+const commentRouter = (0, express_1.Router)({ mergeParams: true });
+commentRouter.post("/", authentication_1.authentication, (0, multer_cloud_1.default)({ store_type: multer_enum_1.Store_Enum.memory }).array("attachments"), (0, validation_1.Validation)(commentValidation.createCommentSchema), comment_service_1.default.createcomment);
 exports.default = commentRouter;

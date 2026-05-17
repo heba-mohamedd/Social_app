@@ -148,23 +148,18 @@ class PostServise {
         (0, response_success_1.successResponse)({ res, data: post });
     };
     getPosts = async (req, res, next) => {
-        const availabilityFilter = (0, post_utils_1.AvailabilityPost)(req);
+        const searchQuery = req?.query?.search
+            ? { content: { $regex: req.query.search, $options: "i" } }
+            : {};
         const posts = await this._postModle.paginate({
             page: Number(req?.query?.page),
             limit: Number(req?.query?.limit),
             sort: { createdAt: -1 },
-            search: req?.query?.search
-                ? {
-                    $and: [
-                        {
-                            $or: [
-                                { content: { $regex: req?.query?.search, $options: "i" } },
-                            ],
-                        },
-                        availabilityFilter,
-                    ],
-                }
-                : availabilityFilter,
+            search: {
+                $or: [...(0, post_utils_1.AvailabilityPost)(req)],
+                deletedAt: { $exists: false },
+                ...searchQuery,
+            },
         });
         (0, response_success_1.successResponse)({ res, data: posts });
     };
@@ -186,7 +181,8 @@ class PostServise {
         const post = await this._postModle.findOneAndUpdate({
             filter: {
                 _id: postId,
-                ...(0, post_utils_1.AvailabilityPost)(req),
+                deletedAt: { $exists: false },
+                $or: [...(0, post_utils_1.AvailabilityPost)(req)],
             },
             update: updataQuery,
             options: {

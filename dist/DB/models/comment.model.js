@@ -34,6 +34,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
+const post_enum_1 = require("../../common/enum/post.enum");
 const CommentSchema = new mongoose_1.default.Schema({
     content: {
         type: String,
@@ -44,7 +45,8 @@ const CommentSchema = new mongoose_1.default.Schema({
     },
     attachments: [String],
     createBy: { type: mongoose_1.Types.ObjectId, ref: "User", required: true },
-    postId: { type: mongoose_1.Types.ObjectId, ref: "Post", required: true },
+    refId: { type: mongoose_1.Types.ObjectId, refPath: "onModel", required: true },
+    onModel: { type: String, enum: post_enum_1.On_Model_Enum, required: true },
     tags: [{ type: mongoose_1.Types.ObjectId, ref: "User" }],
     likes: [{ type: mongoose_1.Types.ObjectId, ref: "User" }],
     folderId: String,
@@ -56,8 +58,16 @@ const CommentSchema = new mongoose_1.default.Schema({
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
 });
+CommentSchema.virtual("replies", {
+    ref: "Comment",
+    localField: "_id",
+    foreignField: "refId",
+    match: {
+        onModel: post_enum_1.On_Model_Enum.Comment,
+    },
+});
 function excludeDeleted() {
-    this.where({ deletedAt: { $exists: false } });
+    this.where({ deletedAt: null });
 }
 CommentSchema.pre("find", excludeDeleted);
 CommentSchema.pre("findOne", excludeDeleted);

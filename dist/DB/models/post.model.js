@@ -88,5 +88,13 @@ PostSchema.post("findOneAndUpdate", async function (doc) {
         });
     }
 });
+PostSchema.virtual("comments", {
+    ref: "Comment",
+    localField: "_id",
+    foreignField: "refId",
+    match: {
+        onModel: post_enum_1.On_Model_Enum.Post,
+    },
+});
 const PostModel = mongoose_1.default.models.Post || mongoose_1.default.model("Post", PostSchema);
 exports.default = PostModel;

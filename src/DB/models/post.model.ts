@@ -2,6 +2,7 @@ import mongoose, { HydratedDocument, Types } from "mongoose";
 import {
   Allow_Comment_Enum,
   Availability_Enum,
+  On_Model_Enum,
 } from "../../common/enum/post.enum";
 import CommentModel from "./comment.model";
 
@@ -80,6 +81,14 @@ PostSchema.post("findOneAndUpdate", async function (doc) {
       },
     );
   }
+});
+PostSchema.virtual("comments", {
+  ref: "Comment",
+  localField: "_id",
+  foreignField: "refId",
+  match: {
+    onModel: On_Model_Enum.Post,
+  },
 });
 const PostModel =
   mongoose.models.Post || mongoose.model<IPost>("Post", PostSchema);
