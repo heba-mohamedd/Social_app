@@ -373,5 +373,11 @@ class AuthService {
         });
         (0, response_success_1.successResponse)({ res, data: { url, Key } });
     };
+    getUsers = async () => {
+        return await this._userModle.find({ filter: {} });
+    };
+    getUser = async (userId) => {
+        return await this._userModle.findOne({ filter: { _id: userId } });
+    };
 }
 exports.default = new AuthService();

@@ -31,6 +31,7 @@ import { successResponse } from "../../common/utils/response.success";
 import TokenService from "../../common/services/token.service";
 import { S3Service } from "../../common/services/s3.service";
 import NotificationService from "../../common/services/notification.service";
+import { Types } from "mongoose";
 
 class AuthService {
   private readonly _userModle = new UserRepository();
@@ -502,6 +503,15 @@ class AuthService {
     //   update: { profilePicture: Key },
     // });
     successResponse({ res, data: { url, Key } });
+  };
+
+  /*********************   Graph Ql**************************** */
+
+  getUsers = async () => {
+    return await this._userModle.find({ filter: {} });
+  };
+  getUser = async (userId: Types.ObjectId) => {
+    return await this._userModle.findOne({ filter: { _id: userId } });
   };
 }
 

@@ -16,6 +16,7 @@ import notificationService from "./common/services/notification.service";
 import postRouter from "./modules/posts/post.controller";
 import commentRouter from "./modules/comments/comment.controller";
 import {
+  GraphQLEnumType,
   GraphQLID,
   GraphQLInt,
   GraphQLList,
@@ -25,6 +26,8 @@ import {
   GraphQLString,
 } from "graphql";
 import { createHandler } from "graphql-http/lib/use/express";
+import { gql_schema } from "./modules/graphql/graphql.schema";
+import { authentication } from "./common/middleware/authentication";
 // import { S3Service } from "./common/services/s3.service";
 // import { pipeline } from "node:stream/promises";
 // import { successResponse } from "./common/utils/response.success";
@@ -140,52 +143,11 @@ const bootstrap = () => {
   app.use("/auth", authRouter);
   app.use("/posts", postRouter);
 
-  const users = [
-    { id: 1, name: "heba", age: 21, specielization: "MERN Stack" },
-    { id: 2, name: "mohamed", age: 22, specielization: "MERN Stack" },
-    { id: 3, name: "norhan", age: 21, specielization: "MERN Stack" },
-    { id: 4, name: "sara", age: 22, specielization: "MERN Stack" },
-    { id: 5, name: "mariam", age: 23, specielization: "MERN Stack" },
-  ];
-  const userTypeObject = new GraphQLObjectType({
-    name: "getUser",
-    fields: {
-      id: { type: GraphQLInt },
-      name: { type: GraphQLString },
-      age: { type: GraphQLInt },
-      specielization: { type: GraphQLString },
-    },
-  });
-  const schema = new GraphQLSchema({
-    query: new GraphQLObjectType({
-      name: "Query", // it is  the root query
-      description: "query info",
-      fields: {
-        // this are the queries
-        getUser: {
-          type: userTypeObject,
-          args: {
-            id: { type: new GraphQLNonNull(GraphQLInt) },
-          },
-          resolve: (parent, args) => {
-            const user = users.find((user) => user.id == args.id);
-            if (!user) {
-              throw new AppError("user not found");
-            }
-            return user;
-          },
-        },
-        listUsers: {
-          type: new GraphQLList(userTypeObject),
-          resolve: () => {
-            return users;
-          },
-        },
-      },
-    }),
-  });
-
-  app.use("/graphql", createHandler({ schema })); // the endpoint for the graphql
+  app.use(
+    "/graphql",
+    authentication,
+    createHandler({ schema: gql_schema, context: (req) => ({ req }) }),
+  ); // the endpoint for the graphql
   app.use("{/*demo}", (req: Request, res: Response, next: NextFunction) => {
     throw new AppError(`URL ${req.originalUrl} Not Found ....`, 404);
     // throw new Error(`URL ${req.originalUrl} Not Found ....`, { cause: 404 });

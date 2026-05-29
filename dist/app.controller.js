@@ -13,8 +13,9 @@ const auth_controller_1 = __importDefault(require("./modules/auth/auth.controlle
 const connectionDB_1 = __importDefault(require("./DB/connectionDB"));
 const redis_service_1 = __importDefault(require("./common/services/redis.service"));
 const post_controller_1 = __importDefault(require("./modules/posts/post.controller"));
-const graphql_1 = require("graphql");
 const express_2 = require("graphql-http/lib/use/express");
+const graphql_schema_1 = require("./modules/graphql/graphql.schema");
+const authentication_1 = require("./common/middleware/authentication");
 const app = (0, express_1.default)();
 const port = Number(config_service_1.PORT);
 const bootstrap = () => {
@@ -34,50 +35,7 @@ const bootstrap = () => {
     redis_service_1.default.connect();
     app.use("/auth", auth_controller_1.default);
     app.use("/posts", post_controller_1.default);
-    const users = [
-        { id: 1, name: "heba", age: 21, specielization: "MERN Stack" },
-        { id: 2, name: "mohamed", age: 22, specielization: "MERN Stack" },
-        { id: 3, name: "norhan", age: 21, specielization: "MERN Stack" },
-        { id: 4, name: "sara", age: 22, specielization: "MERN Stack" },
-        { id: 5, name: "mariam", age: 23, specielization: "MERN Stack" },
-    ];
-    const userTypeObject = new graphql_1.GraphQLObjectType({
-        name: "getUser",
-        fields: {
-            id: { type: graphql_1.GraphQLInt },
-            name: { type: graphql_1.GraphQLString },
-            age: { type: graphql_1.GraphQLInt },
-            specielization: { type: graphql_1.GraphQLString },
-        },
-    });
-    const schema = new graphql_1.GraphQLSchema({
-        query: new graphql_1.GraphQLObjectType({
-            name: "Query",
-            description: "query info",
-            fields: {
-                getUser: {
-                    type: userTypeObject,
-                    args: {
-                        id: { type: new graphql_1.GraphQLNonNull(graphql_1.GraphQLInt) },
-                    },
-                    resolve: (parent, args) => {
-                        const user = users.find((user) => user.id == args.id);
-                        if (!user) {
-                            throw new global_error_handler_1.AppError("user not found");
-                        }
-                        return user;
-                    },
-                },
-                listUsers: {
-                    type: new graphql_1.GraphQLList(userTypeObject),
-                    resolve: () => {
-                        return users;
-                    },
-                },
-            },
-        }),
-    });
-    app.use("/graphql", (0, express_2.createHandler)({ schema }));
+    app.use("/graphql", authentication_1.authentication, (0, express_2.createHandler)({ schema: graphql_schema_1.gql_schema, context: (req) => ({ req }) }));
     app.use("{/*demo}", (req, res, next) => {
         throw new global_error_handler_1.AppError(`URL ${req.originalUrl} Not Found ....`, 404);
     });
