@@ -6,6 +6,7 @@ import {
   GraphQLString,
 } from "graphql";
 
+import * as z from "zod";
 export const genderType = new GraphQLEnumType({
   name: "GenderType",
   values: {
@@ -28,3 +29,5 @@ export const userTypeObject = new GraphQLObjectType({
     gender: { type: genderType },
   },
 });
+
+export const getUserSchema = z.strictObject({ token: z.string() });

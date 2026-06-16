@@ -27,10 +27,17 @@ import {
 } from "graphql";
 import { createHandler } from "graphql-http/lib/use/express";
 import { gql_schema } from "./modules/graphql/graphql.schema";
-import { authentication } from "./common/middleware/authentication";
+import {
+  authentication,
+  decodeToken_and_fetchUser,
+} from "./common/middleware/authentication";
+import { Server } from "socket.io";
+import socketGateway from "./modules/realtime/socket.gateway";
+import { pipeline } from "node:stream/promises";
 // import { S3Service } from "./common/services/s3.service";
 // import { pipeline } from "node:stream/promises";
 // import { successResponse } from "./common/utils/response.success";
+import chatRouter from "./modules/chat/chat.controller";
 
 const app: express.Application = express();
 const port: number = Number(PORT);
@@ -112,36 +119,38 @@ const bootstrap = () => {
   //   },
   // );
 
-  // app.get(
-  //   "/general/*path",
-  //   async (req: Request, res: Response, next: NextFunction) => {
-  //     const { path } = req.params as { path: string[] };
-  //     const { downLoad } = req.query;
-  //     const Key = path.join("/") as string;
+  app.get(
+    "/general/*path",
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const { path } = req.params as { path: string[] };
+        const { downLoad } = req.query;
+        const Key = path.join("/") as string;
 
-  //     const result = await new S3Service().getFile(Key);
-  //     //  const {Body} = result;
-  //     const stream = result.Body as NodeJS.ReadableStream;
-  //     //  if (!Body) {
-  //     //   throw new AppError("File not found", 404);
-  //     //  }
-  //     res.setHeader("Content-Type", result.ContentType as string);
-  //     res.set("Cross-Origin-Resource-Policy", "cross-origin");
-  //     if (downLoad && downLoad === "true") {
-  //       res.setHeader(
-  //         "Content-Disposition",
-  //         `attachment; filename="${path.pop()}"`,
-  //       ); // only apply it for  download
-  //     }
+        const result = await new S3Service().getFile(Key);
+        const stream = result.Body as NodeJS.ReadableStream;
+        if (!stream) {
+          throw new AppError("File not found", 404);
+        }
+        res.setHeader("Content-Type", result.ContentType as string);
+        res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+        if (downLoad && downLoad === "true") {
+          res.setHeader(
+            "Content-Disposition",
+            `attachment; filename="${path[path.length - 1]}"`,
+          ); // only apply it for  download
+        }
 
-  //     await pipeline(stream, res);
-
-  //     // successResponse({ res, data: Key });
-  //   },
-  // );
+        await pipeline(stream, res);
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
 
   app.use("/auth", authRouter);
   app.use("/posts", postRouter);
+  app.use("/chat", chatRouter);
 
   app.use(
     "/graphql",
@@ -155,7 +164,11 @@ const bootstrap = () => {
 
   app.use(globalErrorHandler);
 
-  app.listen(port, () => console.log(`Server is running on port ${port}`));
+  const httpServer = app.listen(port, () =>
+    console.log(`Server is running on port ${port}`),
+  );
+
+  socketGateway.initIo(httpServer);
 };
 
 export default bootstrap;

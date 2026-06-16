@@ -32,9 +32,12 @@ import TokenService from "../../common/services/token.service";
 import { S3Service } from "../../common/services/s3.service";
 import NotificationService from "../../common/services/notification.service";
 import { Types } from "mongoose";
+import ChatRepository from "../../DB/repositories/chat.repository";
 
 class AuthService {
   private readonly _userModle = new UserRepository();
+  private readonly _chatModle = new ChatRepository();
+
   private readonly _redisService = RedisService;
   private readonly _tokenService = TokenService;
   private readonly _s3Service = new S3Service();
@@ -256,7 +259,7 @@ class AuthService {
     });
   };
   signIn = async (req: Request, res: Response, next: NextFunction) => {
-    const { email, password, fcm }: SignInDto = req.body;
+    const { email, password }: SignInDto = req.body;
     if (!email && !password)
       throw new AppError("Email & Password are required", 406);
     if (!email) throw new AppError("Email is required", 406);
@@ -327,21 +330,25 @@ class AuthService {
       this._redisService.count_login_key(email),
     );
 
-    if (fcm) {
-      await this._redisService.addFMC({ userId: user._id, FCMToken: fcm });
-      const tokens = await this._redisService.getFMCs(user._id);
-      await this._notificationService.sendNotifications({
-        tokens,
-        notification: {
-          title: `hi ${user.userName}`,
-          body: `new login at ${new Date()}`,
-        },
-      });
-    }
+    // if (fcm) {
+    //   await this._redisService.addFMC({ userId: user._id, FCMToken: fcm });
+    //   const tokens = await this._redisService.getFMCs(user._id);
+    //   await this._notificationService.sendNotifications({
+    //     tokens,
+    //     notification: {
+    //       title: `hi ${user.userName}`,
+    //       body: `new login at ${new Date()}`,
+    //     },
+    //   });
+    // }
 
     return res.status(200).json({
-      message: "User signed in Successfully",
-      data: { access_token: access_token, refresh_token },
+      message: "Done",
+      data: {
+        success: "User signed in Successfully",
+        access_token: access_token,
+        refresh_token,
+      },
     });
   };
 
@@ -482,6 +489,29 @@ class AuthService {
     return res.status(200).json({ message: "done" });
   };
 
+  getProfile = async (req: Request, res: Response, next: NextFunction) => {
+    // const user = req.user;
+    const user = await this._userModle.findOne({
+      filter: { _id: req.user._id as Types.ObjectId },
+      options: {
+        populate: [
+          {
+            path: "friends",
+          },
+        ],
+      },
+    });
+    const groups = await this._chatModle.find({
+      filter: {
+        participants: { $in: [req?.user?._id] },
+        group: { $exists: true },
+      },
+    });
+
+    successResponse({ res, data: { user, groups } });
+    // return res.status(200).json({ message: "success", user, groups });
+  };
+
   // uploadImage = async (req: Request, res: Response, next: NextFunction) => {
   //   const urls = await this._s3Service.uploadFiles({
   //     files: req.files as Express.Multer.File[],
@@ -490,19 +520,22 @@ class AuthService {
   //   successResponse({ res, data: { urls } });
   // };
 
-  uploadImage = async (req: Request, res: Response, next: NextFunction) => {
-    const { fileName, ContentType } = req.body;
-    const { url, Key } = await this._s3Service.createSignedUrl({
-      fileName,
-      ContentType,
+  uploadProfileImage = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    const profilePicture = await this._s3Service.uploadFile({
+      file: req.file as Express.Multer.File,
       path: `users/${req?.user?._id}`,
     });
 
-    // await this._userModle.findOneAndUpdate({
-    //   filter: { _id: req?.user?._id },
-    //   update: { profilePicture: Key },
-    // });
-    successResponse({ res, data: { url, Key } });
+    const user = await this._userModle.findOneAndUpdate({
+      filter: { _id: req?.user?._id },
+      update: { profilePicture: profilePicture },
+      options: { new: true, projection: { password: 0 } },
+    });
+    successResponse({ res, data: { profilePicture, user } });
   };
 
   /*********************   Graph Ql**************************** */

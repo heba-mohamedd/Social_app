@@ -7,43 +7,9 @@ const graphql_1 = require("graphql");
 const user_type_1 = require("./user.type");
 const auth_service_1 = __importDefault(require("../auth.service"));
 const authentication_1 = require("../../../common/middleware/authentication");
-const users = [
-    {
-        id: 1,
-        name: "heba",
-        age: 21,
-        specielization: "MERN Stack",
-        gender: "female",
-    },
-    {
-        id: 2,
-        name: "mohamed",
-        age: 22,
-        specielization: "MERN Stack",
-        gender: "male",
-    },
-    {
-        id: 3,
-        name: "norhan",
-        age: 21,
-        specielization: "MERN Stack",
-        gender: "female",
-    },
-    {
-        id: 4,
-        name: "sara",
-        age: 22,
-        specielization: "MERN Stack",
-        gender: "female",
-    },
-    {
-        id: 5,
-        name: "mariam",
-        age: 23,
-        specielization: "MERN Stack",
-        gender: "female",
-    },
-];
+const authorization_1 = require("../../../common/middleware/authorization");
+const user_enum_1 = require("../../../common/enum/user.enum");
+const validation_1 = require("../../../common/middleware/validation");
 class UserFields {
     constructor() { }
     query = () => {
@@ -56,9 +22,11 @@ class UserFields {
             },
             getUser: {
                 type: user_type_1.userTypeObject,
+                args: { token: { type: new graphql_1.GraphQLNonNull(graphql_1.GraphQLString) } },
                 resolve: async (parent, args, context) => {
-                    const { user, decoded } = await (0, authentication_1.authentication_gql)(context.req.headers.authorization);
-                    console.log(user);
+                    await (0, validation_1.Validation_GQL)(user_type_1.getUserSchema, args.token);
+                    const { user, decoded } = await (0, authentication_1.authentication_gql)(args.token);
+                    await (0, authorization_1.authorization_gql)(Object.values(user_enum_1.RoleEnum), user.role);
                     return await auth_service_1.default.getUser(user._id);
                 },
             },

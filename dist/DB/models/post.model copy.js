@@ -32,9 +32,13 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importStar(require("mongoose"));
 const post_enum_1 = require("../../common/enum/post.enum");
+const comment_model_1 = __importDefault(require("./comment.model"));
 const PostSchema = new mongoose_1.default.Schema({
     content: {
         type: String,
@@ -58,12 +62,39 @@ const PostSchema = new mongoose_1.default.Schema({
         default: post_enum_1.Availability_Enum.public,
     },
     folderId: String,
+    deletedAt: Date,
 }, {
     timestamps: true,
     strictQuery: true,
     strict: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
+});
+function excludeDeleted() {
+    const query = this.getQuery();
+    if (!query.deletedAt) {
+        this.where({ deletedAt: { $exists: false } });
+    }
+}
+PostSchema.pre("find", excludeDeleted);
+PostSchema.pre("findOne", excludeDeleted);
+PostSchema.pre("findOneAndUpdate", excludeDeleted);
+PostSchema.post("findOneAndUpdate", async function (doc) {
+    if (doc?.deletedAt) {
+        await comment_model_1.default.updateMany({
+            postId: doc._id,
+        }, {
+            deletedAt: new Date(),
+        });
+    }
+});
+PostSchema.virtual("comments", {
+    ref: "Comment",
+    localField: "_id",
+    foreignField: "refId",
+    match: {
+        onModel: post_enum_1.On_Model_Enum.Post,
+    },
 });
 const PostModel = mongoose_1.default.models.Post || mongoose_1.default.model("Post", PostSchema);
 exports.default = PostModel;

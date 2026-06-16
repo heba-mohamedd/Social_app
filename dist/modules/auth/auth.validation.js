@@ -40,7 +40,6 @@ exports.signInSchema = {
     body: z.strictObject({
         email: z.email("inValid email address"),
         password: z.string().min(6),
-        fcm: z.string(),
     }),
 };
 exports.signUpSchema = {

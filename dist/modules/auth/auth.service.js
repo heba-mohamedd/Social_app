@@ -20,8 +20,10 @@ const response_success_1 = require("../../common/utils/response.success");
 const token_service_1 = __importDefault(require("../../common/services/token.service"));
 const s3_service_1 = require("../../common/services/s3.service");
 const notification_service_1 = __importDefault(require("../../common/services/notification.service"));
+const chat_repository_1 = __importDefault(require("../../DB/repositories/chat.repository"));
 class AuthService {
     _userModle = new user_repository_1.default();
+    _chatModle = new chat_repository_1.default();
     _redisService = redis_service_1.default;
     _tokenService = token_service_1.default;
     _s3Service = new s3_service_1.S3Service();
@@ -188,7 +190,7 @@ class AuthService {
         });
     };
     signIn = async (req, res, next) => {
-        const { email, password, fcm } = req.body;
+        const { email, password } = req.body;
         if (!email && !password)
             throw new global_error_handler_1.AppError("Email & Password are required", 406);
         if (!email)
@@ -239,20 +241,13 @@ class AuthService {
             options: { expiresIn: "1y", jwtid },
         });
         await this._redisService.deleteKey(this._redisService.count_login_key(email));
-        if (fcm) {
-            await this._redisService.addFMC({ userId: user._id, FCMToken: fcm });
-            const tokens = await this._redisService.getFMCs(user._id);
-            await this._notificationService.sendNotifications({
-                tokens,
-                notification: {
-                    title: `hi ${user.userName}`,
-                    body: `new login at ${new Date()}`,
-                },
-            });
-        }
         return res.status(200).json({
-            message: "User signed in Successfully",
-            data: { access_token: access_token, refresh_token },
+            message: "Done",
+            data: {
+                success: "User signed in Successfully",
+                access_token: access_token,
+                refresh_token,
+            },
         });
     };
     forgetPassword = async (req, res, next) => {
@@ -364,14 +359,36 @@ class AuthService {
         }
         return res.status(200).json({ message: "done" });
     };
-    uploadImage = async (req, res, next) => {
-        const { fileName, ContentType } = req.body;
-        const { url, Key } = await this._s3Service.createSignedUrl({
-            fileName,
-            ContentType,
+    getProfile = async (req, res, next) => {
+        const user = await this._userModle.findOne({
+            filter: { _id: req.user._id },
+            options: {
+                populate: [
+                    {
+                        path: "friends",
+                    },
+                ],
+            },
+        });
+        const groups = await this._chatModle.find({
+            filter: {
+                participants: { $in: [req?.user?._id] },
+                group: { $exists: true },
+            },
+        });
+        (0, response_success_1.successResponse)({ res, data: { user, groups } });
+    };
+    uploadProfileImage = async (req, res, next) => {
+        const profilePicture = await this._s3Service.uploadFile({
+            file: req.file,
             path: `users/${req?.user?._id}`,
         });
-        (0, response_success_1.successResponse)({ res, data: { url, Key } });
+        const user = await this._userModle.findOneAndUpdate({
+            filter: { _id: req?.user?._id },
+            update: { profilePicture: profilePicture },
+            options: { new: true, projection: { password: 0 } },
+        });
+        (0, response_success_1.successResponse)({ res, data: { profilePicture, user } });
     };
     getUsers = async () => {
         return await this._userModle.find({ filter: {} });

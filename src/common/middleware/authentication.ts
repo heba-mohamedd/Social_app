@@ -12,12 +12,7 @@ import {
 
 const _userModel = new UserRepository();
 
-export const authentication = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
-  const { authorization } = req.headers;
+export const decodeToken_and_fetchUser = async (authorization: string) => {
   if (!authorization) {
     throw new AppError("token not exist");
   }
@@ -54,6 +49,18 @@ export const authentication = async (
   if (!user) {
     throw new AppError("user not exist", 404);
   }
+
+  return { user, decoded };
+};
+export const authentication = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  const { authorization } = req.headers;
+
+  const { user, decoded } = await decodeToken_and_fetchUser(authorization!);
+
   if (
     user?.changeCredential &&
     user?.changeCredential?.getTime() > decoded.iat! * 1000

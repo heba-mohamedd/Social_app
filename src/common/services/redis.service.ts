@@ -180,7 +180,7 @@ class RedisServise {
       console.log("error to incr operation", error);
     }
   };
-
+  /*************** FMC*****************/
   key(userId: Types.ObjectId) {
     return `user:FCM:${userId}`;
   }
@@ -214,6 +214,38 @@ class RedisServise {
   }
   async removeFCMUser(userId: Types.ObjectId) {
     return await this.client.del(this.key(userId));
+  }
+
+  /***************Socket*****************/
+  socketkey(userId: Types.ObjectId) {
+    return `user:Socket:${userId}`;
+  }
+  async addSocket({
+    userId,
+    socketID,
+  }: {
+    userId: Types.ObjectId;
+    socketID: string;
+  }) {
+    return await this.client.sAdd(this.socketkey(userId), socketID);
+  }
+  async removeSocket({
+    userId,
+    socketID,
+  }: {
+    userId: Types.ObjectId;
+    socketID: string;
+  }) {
+    return await this.client.sRem(this.socketkey(userId), socketID);
+  }
+  async getSockets(userId: Types.ObjectId) {
+    return await this.client.sMembers(this.socketkey(userId));
+  }
+  async hasSockets(userId: Types.ObjectId) {
+    return await this.client.sCard(this.socketkey(userId));
+  }
+  async removeSocketUser(userId: Types.ObjectId) {
+    return await this.client.del(this.socketkey(userId));
   }
 }
 

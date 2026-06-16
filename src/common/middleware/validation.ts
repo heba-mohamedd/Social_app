@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { AppError } from "../../common/utils/global-error-handler";
 import { ZodType } from "zod";
+import { GraphQLError } from "graphql";
 
 type reqType = keyof Request;
 type schemaType = Partial<Record<reqType, ZodType>>;
@@ -35,4 +36,30 @@ export const Validation = (schema: schemaType) => {
 
     next();
   };
+};
+
+export const Validation_GQL = async (schema: ZodType, data: any) => {
+  const validationError = [];
+
+  const result = await schema.safeParseAsync(data);
+
+  if (!result.success) {
+    const errors = result.error.issues.map((err: any) => {
+      return {
+        path: err.path[0],
+        message: err.message,
+      };
+    });
+    validationError.push(...errors);
+  }
+
+  if (validationError.length > 0) {
+    throw new GraphQLError("validation failed", {
+      extensions: {
+        code: "BAD_REQUEST",
+        status: 400,
+        message: validationError,
+      },
+    });
+  }
 };

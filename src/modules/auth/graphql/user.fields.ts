@@ -5,48 +5,13 @@ import {
   GraphQLString,
 } from "graphql";
 import { AppError } from "../../../common/utils/global-error-handler";
-import { genderType, userTypeObject } from "./user.type";
+import { genderType, getUserSchema, userTypeObject } from "./user.type";
 import { createUserArgs, getUserArgs } from "./user.args";
 import authService from "../auth.service";
 import { authentication_gql } from "../../../common/middleware/authentication";
-
-const users = [
-  {
-    id: 1,
-    name: "heba",
-    age: 21,
-    specielization: "MERN Stack",
-    gender: "female",
-  },
-  {
-    id: 2,
-    name: "mohamed",
-    age: 22,
-    specielization: "MERN Stack",
-    gender: "male",
-  },
-  {
-    id: 3,
-    name: "norhan",
-    age: 21,
-    specielization: "MERN Stack",
-    gender: "female",
-  },
-  {
-    id: 4,
-    name: "sara",
-    age: 22,
-    specielization: "MERN Stack",
-    gender: "female",
-  },
-  {
-    id: 5,
-    name: "mariam",
-    age: 23,
-    specielization: "MERN Stack",
-    gender: "female",
-  },
-];
+import { authorization_gql } from "../../../common/middleware/authorization";
+import { RoleEnum } from "../../../common/enum/user.enum";
+import { Validation_GQL } from "../../../common/middleware/validation";
 
 class UserFields {
   constructor() {}
@@ -72,13 +37,12 @@ class UserFields {
       },
       getUser: {
         type: userTypeObject,
+        args: { token: { type: new GraphQLNonNull(GraphQLString) } },
         resolve: async (parent: any, args: any, context: any) => {
+          await Validation_GQL(getUserSchema, args.token);
           // console.log({ context: context.req.raw.user._id });
-          const { user, decoded } = await authentication_gql(
-            context.req.headers.authorization!,
-          );
-          console.log(user);
-
+          const { user, decoded } = await authentication_gql(args.token);
+          await authorization_gql(Object.values(RoleEnum), user.role!);
           return await authService.getUser(user._id);
         },
       },

@@ -15,7 +15,9 @@ import { authentication } from "../../common/middleware/authentication";
 import { RoleEnum } from "../../common/enum/user.enum";
 import multerCloud from "../../common/middleware/multer.cloud";
 import { Store_Enum } from "../../common/enum/multer.enum";
+import chatRouter from "../chat/chat.controller";
 const authRouter = Router();
+authRouter.use("/:userId/chat", chatRouter);
 
 authRouter.post("/signup", Validation(signUpSchema), authService.signUp);
 authRouter.patch(
@@ -51,19 +53,26 @@ authRouter.patch(
   Validation(resetPasswordSchema),
   authService.resetPassword,
 );
+authRouter.get(
+  "/profile",
+  authentication,
+  authorization([RoleEnum.user]),
+  authService.getProfile,
+);
 
 authRouter.get("/logout", authentication, authService.logout);
 
-// authRouter.post(
-//   "/upload",
-//   multerCloud().single("attachment"),
-//   authService.uploadImage,
-// );
 authRouter.post(
   "/upload",
   authentication,
-  // multerCloud({ store_type: Store_Enum.memory }).array("attachment"),
-  authService.uploadImage,
+  multerCloud().single("attachment"),
+  authService.uploadProfileImage,
 );
+// authRouter.post(
+//   "/upload",
+//   authentication,
+//   // multerCloud({ store_type: Store_Enum.memory }).array("attachment"),
+//   authService.uploadImage,
+// );
 
 export default authRouter;

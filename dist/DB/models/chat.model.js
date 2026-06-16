@@ -33,29 +33,28 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getUserSchema = exports.userTypeObject = exports.genderType = void 0;
-const graphql_1 = require("graphql");
-const z = __importStar(require("zod"));
-exports.genderType = new graphql_1.GraphQLEnumType({
-    name: "GenderType",
-    values: {
-        male: { value: "male" },
-        female: { value: "female" },
-    },
+const mongoose_1 = __importStar(require("mongoose"));
+const messageSchema = new mongoose_1.default.Schema({
+    createdBy: { type: mongoose_1.Types.ObjectId, ref: "User", required: true },
+    content: { type: String, required: true },
+}, {
+    timestamps: true,
+    strictQuery: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
 });
-exports.userTypeObject = new graphql_1.GraphQLObjectType({
-    name: "getUser",
-    fields: {
-        _id: { type: graphql_1.GraphQLID },
-        firstName: { type: graphql_1.GraphQLString },
-        lastName: { type: graphql_1.GraphQLString },
-        email: { type: graphql_1.GraphQLString },
-        address: { type: graphql_1.GraphQLString },
-        phone: { type: graphql_1.GraphQLString },
-        profilePicture: { type: graphql_1.GraphQLString },
-        age: { type: graphql_1.GraphQLInt },
-        specielization: { type: graphql_1.GraphQLString },
-        gender: { type: exports.genderType },
-    },
+const ChatSchema = new mongoose_1.default.Schema({
+    participants: [{ type: mongoose_1.Types.ObjectId, ref: "User", required: true }],
+    messages: [messageSchema],
+    createdBy: { type: mongoose_1.Types.ObjectId, ref: "User", required: true },
+    group: String,
+    groupImage: String,
+    roomId: String,
+}, {
+    timestamps: true,
+    strictQuery: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
 });
-exports.getUserSchema = z.strictObject({ token: z.string() });
+const ChatModel = mongoose_1.default.models.Chat || mongoose_1.default.model("Chat", ChatSchema);
+exports.default = ChatModel;

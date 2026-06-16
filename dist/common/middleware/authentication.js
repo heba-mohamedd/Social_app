@@ -3,15 +3,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.authentication_gql = exports.authentication = void 0;
+exports.authentication_gql = exports.authentication = exports.decodeToken_and_fetchUser = void 0;
 const redis_service_js_1 = __importDefault(require("../services/redis.service.js"));
 const user_repository_1 = __importDefault(require("../../DB/repositories/user.repository"));
 const token_service_1 = __importDefault(require("../services/token.service"));
 const global_error_handler_1 = require("../utils/global-error-handler");
 const config_service_js_1 = require("../../config/config.service.js");
 const _userModel = new user_repository_1.default();
-const authentication = async (req, res, next) => {
-    const { authorization } = req.headers;
+const decodeToken_and_fetchUser = async (authorization) => {
     if (!authorization) {
         throw new global_error_handler_1.AppError("token not exist");
     }
@@ -44,6 +43,12 @@ const authentication = async (req, res, next) => {
     if (!user) {
         throw new global_error_handler_1.AppError("user not exist", 404);
     }
+    return { user, decoded };
+};
+exports.decodeToken_and_fetchUser = decodeToken_and_fetchUser;
+const authentication = async (req, res, next) => {
+    const { authorization } = req.headers;
+    const { user, decoded } = await (0, exports.decodeToken_and_fetchUser)(authorization);
     if (user?.changeCredential &&
         user?.changeCredential?.getTime() > decoded.iat * 1000) {
         throw new global_error_handler_1.AppError("inValid token");

@@ -1,7 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Validation = void 0;
+exports.Validation_GQL = exports.Validation = void 0;
 const global_error_handler_1 = require("../../common/utils/global-error-handler");
+const graphql_1 = require("graphql");
 const Validation = (schema) => {
     return async (req, res, next) => {
         const validationError = [];
@@ -28,3 +29,26 @@ const Validation = (schema) => {
     };
 };
 exports.Validation = Validation;
+const Validation_GQL = async (schema, data) => {
+    const validationError = [];
+    const result = await schema.safeParseAsync(data);
+    if (!result.success) {
+        const errors = result.error.issues.map((err) => {
+            return {
+                path: err.path[0],
+                message: err.message,
+            };
+        });
+        validationError.push(...errors);
+    }
+    if (validationError.length > 0) {
+        throw new graphql_1.GraphQLError("validation failed", {
+            extensions: {
+                code: "BAD_REQUEST",
+                status: 400,
+                message: validationError,
+            },
+        });
+    }
+};
+exports.Validation_GQL = Validation_GQL;
